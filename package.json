@@ -1,0 +1,45 @@
+{
+  "name": "Landing",
+  "version": "0.0.0",
+  "description": "",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "reminder"
+  ],
+  "author": "alexn",
+  "license": "ISC",
+  "dependencies": {
+    "express": "4.x",
+    "method-override": "~1.0.0",
+    "body-parser": "~1.0.0",
+    "errorhandler" : "*",
+    "express-session" : "*",
+    "cookie-parser": "*",
+    "jade": "*",
+    "nconf":  "*",
+    "passport": "*",
+    "passport-local": "*",
+    "nodemon": "*",
+    "supervisor": "*",
+    "async": "*",
+    "socket.io": "1.x",
+    "node-uuid": "1.x",
+    "lodash": "2.x",
+    "connect-mongo": ">=0.4.x",
+    "connect-flash": "*",
+    "passport": ">=0.2.x",
+    "passport-local": "1.0.0",
+    "mv": "*",
+    "grunt-bg-shell": "*",
+    "grunt-contrib-watch": "*",
+    "grunt-contrib-less": "*",
+    "grunt-reload": "*",
+    "grunt-nodemon": "*",
+    "grunt-concurrent": "~0.5.0",
+    "grunt-karma": "*",
+    "mongoose": "~3.8.0"
+  }
+}

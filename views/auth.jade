@@ -1,0 +1,33 @@
+﻿- title = "Auth";
+
+html
+  link(rel="stylesheet" href="../css/global.css")
+  link(rel="stylesheet" href="../css/main.css")
+  title #{title}
+  script(src="bower_components/jquery/jquery.min.js")
+  script(src="js/auth.js")
+body.ui
+  div.pattern-cell.login: div
+    div.substrate
+      h1= message
+      form(action="/auth", method="POST")
+        div.textbox
+          input(type="text", placeholder="Name", name="name")
+          if errors && errors[0]
+            label.red= errors[0].name
+      
+        div.textbox.icon
+          i.fa.fa-user
+          input(type="text", placeholder="Login", name="username")
+          if errors && errors[0]
+            label.red= errors[0].username
+
+        div.textbox.icon
+          i.fa.fa-lock
+          input(type="password", placeholder="Password", name="password")
+          if errors && errors[0]
+            label.red= errors[0].password
+        
+        button.rectangular.green.submit-button
+          i.fa.fa-sign-in
+          span Log In

@@ -5,21 +5,19 @@ module.exports = {
 	changeStatus: function(userId, friendUserId, status, cb) {
 		//меняем статус друга
 		var User = mongoose.model('User');
-		var Friend = mongoose.model('Friend');
+		var Profile = mongoose.model('Profile');
 
 		//от кого запрос на изменение статуса
-		Friend.findOne({userId: userId.toString()}, function(err, friend) {
+		Profile.findOne({userId: userId.toString()}, function(err, profile) {
 
-			if (!err && friend) {
-				var targetFriendIdx = _.pluck(friend.friends, 'userId')
+			if (!err && profile) {
+				var targetFriendIdx = _.pluck(profile.friends, 'userId')
 							.map(function(t) {return t.toString();}).indexOf(friendUserId);
 				
 				if (targetFriendIdx != -1) {
-					var targetFriend = friend.friends[targetFriendIdx];
+					var targetFriend = profile.friends[targetFriendIdx];
 					targetFriend.status = status;
-					//targetFriend.ortogonalId = friend._id;
-					console.log("UPDATE STATUS->", status);
-					friend.save(function(err, saved) {
+					profile.save(function(err, saved) {
 						if (err) cb(err);
 						else {
 							targetFriend.ortogonalId = saved.friends[targetFriendIdx]._id;
@@ -33,13 +31,13 @@ module.exports = {
 							delete newFriendData['_id'];
 							delete newFriendData['passwordSalt'];
 							delete newFriendData['passwordHash'];
-							console.log("ADD TO FRIENDS->", newFriendData);
-							friend.friends.push(newFriendData);
 
-							friend.save(function(err, saved) {
+							profile.friends.push(newFriendData);
+
+							profile.save(function(err, saved) {
 								if (err) cb(err);
 								else {
-									newFriendData.ortogonalId = _.last(friend.friends)._id;
+									newFriendData.ortogonalId = _.last(profile.friends)._id;
 									cb(null, newFriendData);
 								}
 							});
@@ -54,17 +52,16 @@ module.exports = {
 		})
 	},
 	_removeOrtogonalFriend: function(userId, removedFriendUserId, cb) {
-		var Friend = mongoose.model('Friend');
+		var Profile = mongoose.model('Profile');
 
-		Friend.findOne({userId: removedFriendUserId}, function(err, ortoFriend) {
-			console.log("REMOVE ORTOGONAL->", ortoFriend);
+		Profile.findOne({userId: removedFriendUserId}, function(err, ortoFriend) {
+
 			if (!err && ortoFriend) {
 				var removeOrto = ortoFriend.friends.filter(
 					function(t) {
 						return t.userId.toString() == userId;
 					});
 
-				console.log("DELETE FRIEND->", removeOrto);
 				removeOrto.forEach(function(rm, index) {
 					ortoFriend.friends.id(rm._id).remove();
 				})
@@ -77,13 +74,13 @@ module.exports = {
 	removeFriend: function(userId, friendId, checkStatus, cb) {
 		//удаляем из друзей
 		var scope = this;
-		var Friend = mongoose.model('Friend');
+		var Profile = mongoose.model('Profile');
 
-		Friend.findOne({userId: userId.toString()}, function(err, friend) {
-			console.log("DELETE->", err, friend)
-			if (!err && friend) {
-				var removedFriend = friend.friends.id(friendId);
-				console.log("REMOVE FRIEND->", removedFriend);
+		Profile.findOne({userId: userId.toString()}, function(err, profile) {
+
+			if (!err && profile) {
+				var removedFriend = profile.friends.id(friendId);
+
 				if (removedFriend && removedFriend.status == checkStatus) {
 					var removedFriendUserId = removedFriend.userId;
 					removedFriend.remove();
@@ -92,14 +89,14 @@ module.exports = {
 						scope._removeOrtogonalFriend(userId, removedFriendUserId,
 							function(err) {
 								if (!err) {
-									console.log("ALL FRIENDS CLEAR!");
-									friend.save(cb);	
+
+									profile.save(cb);	
 								} else {
 									cb(err);
 								}
 							})	
 					} else {
-						friend.save(cb);
+						profile.save(cb);
 					}
 				} else {
 					cb(null);
@@ -110,17 +107,18 @@ module.exports = {
 		})
 	},
 	removeFromInbox: function(userId, friendId, cb) {
+		//удаляем из входящих
 		//@userId - пользователь, который хочет отклонить заявку
 		//@friendId - друг, который подал заявку
-		var Friend = mongoose.model('Friend');
+		var Profile = mongoose.model('Profile');
 
-		Friend.findOne({'friends.userId': userId}, function(err, remFriend) {
-			console.log("PRERATE TO DELETE->", remFriend);
+		Profile.findOne({'friends.userId': userId}, function(err, remFriend) {
+
 			if (!err && remFriend) {
 				//фильтруем и удаляем выбранного друга
-				console.log("FIND FRIENDS TO DELETE->", remFriend.friends);
+
 				remFriend.friends.forEach(function(f, index) {
-					console.log("CHECK DELETE->", f);
+
 					if (f.userId == userId) {
 						console.log("REMOVE FRIEND->", f);
 						remFriend.friends[index].remove();
@@ -133,14 +131,14 @@ module.exports = {
 		});
 
 	},
-	addFriend: function(userId, friend, cb) {
+	addFriend: function(userId, addFriend, cb) {
 		//добавляем нового друга
-		var Friend = mongoose.model('Friend');
+		var Profile = mongoose.model('Profile');
 
-		Friend.findOne({userId: userId}, function(err, friend) {
-			if (!err && friend) {
-				friend.friends.push(friend);
-				friend.save(cb);
+		Profile.findOne({userId: userId}, function(err, profile) {
+			if (!err && profile) {
+				profile.friends.push(addFriend);
+				profile.save(cb);
 			} else {
 				cb(err);
 			}
@@ -149,31 +147,31 @@ module.exports = {
 
 	addFriendByFriend: function(userId, friendId, cb) {
 
-		var Friend = mongoose.model('Friend');
+		var Profile = mongoose.model('Profile');
 
-		Friend.findOne({userId: userId}, function(err, friend) {
-			console.log("ERR->", err, friend)
-			if (!err && friend) {
-				Friend.findOne({userId: friendId}, function(err, friendWith) {
-					if (!err && friendWith) {
-						var friendWithData = _.extend({}, friendWith._doc, {status: 'inbox'});
+		Profile.findOne({userId: userId}, function(err, myProfile) {
+
+			if (!err && myProfile) {
+				Profile.findOne({userId: friendId}, function(err, friendProfile) {
+					if (!err && friendProfile) {
+						var friendWithData = _.extend({}, friendProfile._doc, {status: 'inbox'});
 						delete friendWithData._id;
 						delete friendWithData.passwordSalt;
 						delete friendWithData.passwordHash;
 						//если пользователя нет в друзьях, то добавляем, иначе кидаем ошибку
-						var friendIndex = _.pluck(friend.friends, 'userId')
+						var friendIndex = _.pluck(myProfile.friends, 'userId')
 						.map(function(t) {
 							return t.toString();
-						}).indexOf(friendWith.userId.toString());
+						}).indexOf(friendProfile.userId.toString());
 
 						if (friendIndex == -1) {
-							console.log("ADD TO INBOX->", friendWithData);
-							friend.friends.push(friendWithData);
-							friend.save(function(err, saved) {
+
+							myProfile.friends.push(friendWithData);
+							myProfile.save(function(err, saved) {
 								cb(err, friendWithData);
 							})
 						} else {
-							console.log("ERR->user is already your friend");
+
 							cb({error: 'user is already your friend'});
 						}
 					} else {
@@ -187,39 +185,36 @@ module.exports = {
 	},
 
 	getIncomes: function(inviteId, cb) {
-		//найдем все приглашения
-		var Friend = mongoose.model('Friend');
-		console.log("inviteId->", inviteId);
-		Friend.find(
+		//находим все приглашения
+		var Profile = mongoose.model('Profile');
+
+		Profile.find(
 			{'friends.userId': inviteId, 
 			 'friends.status': 'outbox'},
-			  function(err, incomeFriends) {
+			  function(err, incomeProfile) {
 
-			incomeFriends.forEach(function(fr, index) {
-				incomeFriends[index].status = "inbox";
+			incomeProfile.forEach(function(fr, index) {
+				incomeProfile[index].status = "inbox";
 			})
-			console.log("INCOMES->", incomeFriends);
-			cb(err, incomeFriends);
+
+			cb(err, incomeProfile);
 		})
 	},
 	getByStatus: function(userId, status, cb) {
-		var Friend = mongoose.model('Friend');
+
+		var Profile = mongoose.model('Profile');
 		var queryParams = {userId: userId};
 
-		Friend.findOne(queryParams, function(err, friend) {
-			if (!err && friend) {
-				var friends = _.where(friend.friends, {status: status});
-				console.log(friend);
-				console.log(friend.friends);
-				console.log('FRIEND FRIENDS->', friends);
+		Profile.findOne(queryParams, function(err, profile) {
+			if (!err && profile) {
+				var friends = _.where(profile.friends, {status: status});
 				cb(err, friends);
 			} else {
-				if (!friend) {
-					Friend.create({
+				if (!profile) {
+					Profile.create({
 						userId: userId,
 						friends: []
-					}, function(err, friend) {
-						console.log('FRIEND INIT!-')
+					}, function(err, created) {
 						cb(err, []);
 					})
 				} else {
@@ -230,7 +225,6 @@ module.exports = {
 	},
 	getFriendsByStatus: function(userId, status, cb) {
 		//берем список друзей в зависимости от статуса
-		var Friend = mongoose.model('Friend');
 		var status = status || 'accepted';
 
 		//для входящих отдельный запрос

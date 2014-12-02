@@ -7,16 +7,16 @@ module.exports = function(app) {
 
 		if (req.isAuthenticated()) {
 
-			var Friend = mongoose.model('Friend');
-			Friend.findOne({userId: req.user._id}, function(err, friend) {
-				if (!err && !friend) {
-					Friend.create({
+			var Profile = mongoose.model('Profile');
+			//создадим профиль пользователя, если его еще не существует
+			Profile.findOne({userId: req.user._id}, function(err, profile) {
+				if (!err && !profile) {
+					Profile.create({
 						userId: req.user._id,
 						name: req.user.name,
 						dateOfRegistration: req.user.dateOfRegistration
 					}, function(err, created) {
 						if (!err) {
-							console.log("CREATE PROFILE START->", req.user._id);
 							res.render('main');
 						} else {
 							res.status(500).send(err);
@@ -25,7 +25,6 @@ module.exports = function(app) {
 				} else {
 					if (err) res.status(500).send(err);
 					else {
-						console.log("BYPASS START->");
 						res.render('main');
 					}
 				}

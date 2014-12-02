@@ -18,12 +18,12 @@ define('App', [
 	})
 
 	function createRouter(app) {
-		app.Router = new Backbone.Router({
+		var Router = Backbone.Router.extend({
 			routes: {
-				'/profile': 'showProfile',
-				'/search': 'showFriends',
-				'/friends': 'showSearch',
-				'.*': 'showMain'
+				'profile': 'showProfile',
+				'friends': 'showFriends',
+				'search': 'showSearch',
+				'*path': 'showMain'
 			},
 			showMain: function() {
 				app.showMainView();
@@ -39,6 +39,8 @@ define('App', [
 			}
 
 		})
+
+		app.Router = new Router();
 	}
 
 	function initMenu(app) {
@@ -81,7 +83,7 @@ define('App', [
 	})
 
 	app.showMainView = function() {
-		ProfileModule.API.showAll();
+		ProfileModule.API.showLayout();
 	}
 
 	app.registerMenu = function(options) {

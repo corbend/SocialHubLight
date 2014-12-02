@@ -8,6 +8,14 @@ module.exports = function(app) {
 
 	var router = express.Router();
 
+	router.use('all', function(req, res, next) {
+		if (req.isAuthenticated()) {
+			next(null);
+		} else {
+			next(new Error("not authorize!"));
+		}
+	})
+
 	router.put('/:id/accept', function(req, res) {
 		var callUserId = req.user._id;
 		var friendId = req.params.id;
@@ -77,19 +85,19 @@ module.exports = function(app) {
 	})
 
 
-	function searchUsers(iAm, isSearch, cb) {
-		var Friend = mongoose.model('Friend');
+	function searchUsers(iAmProfile, isSearch, cb) {
+		var Profile = mongoose.model('Profile');
 
-		var queryParams = {userId: {$ne: iAm.userId}};
+		var queryParams = {userId: {$ne: iAmProfile.userId}};
 		if (isSearch) {
 			queryParams.name = {$regex: new RegExp(isSearch)};
 		}
 
-		Friend.find(queryParams,
-		function(err, friends) {
+		Profile.find(queryParams,
+		function(err, profiles) {
 			if (err) cb(err);
 			else {
-				var clone = _.clone(friends);
+				var clone = _.clone(profiles);
 				var isOutboxed = false;
 				var isAccepted = false;
 
@@ -97,16 +105,24 @@ module.exports = function(app) {
 
 					var mod = clone[index].toObject();
 
-					if (iAm && iAm.friends) {
-						iAm.friends.forEach(function(f) {
+					if (iAmProfile && iAmProfile.friends) {
+						iAmProfile.friends.forEach(function(f) {
 							if (f.userId.toString() == mod.userId.toString()) {
-								console.log("!!IS MY FRIEND");
+
 								mod.isMyFriend = true;
 								mod.status = f.status;
 								mod.ortogonalId = f._id;
 							}
 						})
 					}
+
+					var isInOtherInbox = _.where(mod.friends, {userId: iAmProfile.userId})[0];
+					if (isInOtherInbox) {
+						mod.isMyFriend = true;
+						mod.status = 'inbox';
+						mod.ortogonalId = isInOtherInbox._id;
+					}
+
 					clone[index] = mod;
 				})
 
@@ -117,10 +133,10 @@ module.exports = function(app) {
 
 	router.get('/all', function(req, res) {
 
-		var Friend = mongoose.model('Friend');
+		var Profile = mongoose.model('Profile');
 		var isSearch = req.query.search;
 
-		Friend.findOne({userId: req.user._id}, function(err, iAm) {
+		Profile.findOne({userId: req.user._id}, function(err, iAm) {
 			if (err) res.status(500).send(err);
 			else {
 				if (iAm) {

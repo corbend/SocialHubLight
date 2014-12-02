@@ -4,23 +4,26 @@ var nconf = require("nconf");
 var config = require('./config');
 
 var startup = require('./startup').startDB;
+var nodeEnv = process.env.NODE_ENV || 'development';
+var devMode = nodeEnv;
 var mongoHost = process.env.OPENSHIFT_MONGODB_DB_HOST;
 var mongoPort = process.env.OPENSHIFT_MONGODB_DB_PORT;
 var mongoUsername = process.env.OPENSHIFT_MONGODB_DB_USERNAME;
 var mongoPassword = process.env.OPENSHIFT_MONGODB_DB_PASSWORD;
 
 var User = require('./models/User').User;
-var Friend = require('./models/Friend').Friend;
-var Invite = require('./models/Invite').Friend;
+var Profile = require('./models/Profile').Profile;
 
 function getConnectionConfig(configObject) {
 
-	var connectionString = configObject.get('db_string');
+	var devConnectionString = configObject.get('db_string');
+	var detConString = devConnectionString;
 	var development = true;
-	//OPENSHIFT setup
-	if (mongoHost && mongoPort) {
-		development = false;
-		connectionString = [
+
+	//OPENSHIFT DB setup
+	if (mongoHost && mongoPort && devMode == "production") {
+
+		detConString = [
 			'mongodb://',
 			mongoUsername, ':',
 			mongoPassword, '@',
@@ -29,12 +32,12 @@ function getConnectionConfig(configObject) {
 	}
 
 	var baseConfig = {
-		connectionString: connectionString,
+		connectionString: detConString,
 		name: configObject.get('db_name'),
 		db: configObject.get('db_name')
 	};
 
-	if (development) {
+	if (devMode == "development") {
 
 		baseConfig.host = mongoHost;
 		baseConfig.port = mongoPort;
@@ -70,14 +73,11 @@ function init(configObject, outerCallback) {
 				cb(err);
 			})
 		},
-		function(connection, cb) {
-			console.log(connection);
-			
+		function(connection, cb) {		
 			startup.checkAdminExist(connection, cb);
 		},
 		function(_, cb) {
 			console.log("prepopulate data!");
-			console.log(cb);
 			//stub for populating db
 			cb(null);
 		}
@@ -87,8 +87,6 @@ function init(configObject, outerCallback) {
 			console.log("ERROR->" + err);
 			outerCallback(err);
 		} else {
-			console.log("ADMIN CHECKED->");
-			console.log(result);
 			outerCallback(null, configObject);
 		}
 	})

@@ -6,7 +6,7 @@ var UserUtils = require('../utils/users').Api;
 module.exports = function(app) {
  
     app.get('/login', function (req, res, next) {
-        //res.locals.errors = ;
+
         res.render('auth', {
             'errors': req.flash('errors'),
             'message': req.flash('message')
@@ -19,6 +19,9 @@ module.exports = function(app) {
     });
 
     function validateAuth(username, password, name) {
+        /**
+         * проверка на символические характеристики данных пользователя
+         */
         var errors = {};
 
         if (!username) {
@@ -28,10 +31,6 @@ module.exports = function(app) {
         if (!password) {
             errors.password = "is required!";
         }
-
-        // if (name && !(/^[a-zA-Zа-яА-Я\s]{1,32}$/.test(name))) {
-        //     errors.name = 'must have alphabets characteres only, length >= 1 and <= 32!';
-        // }
 
         if (!(/^[a-zA-Z]{1}[a-zA-Zа-яА-Я\d]{3,7}$/.test(username))) {
             errors.username = "must start with alphabet character, contains alphaber or numeric, length >= 3 and <=7";
@@ -63,8 +62,7 @@ module.exports = function(app) {
                                 if (err) {
                                     return next(err);
                                 } else {
-                                    console.log("NEW USER CREATED!->", userData, inserted);
-                                    req.flash('message', "Please use new credentials to login");
+                                    req.flash('message', "Registration success! Please use new credentials to login");
                                     return res.redirect('/login');
                                 }
                             }, userData)
@@ -87,17 +85,34 @@ module.exports = function(app) {
                             user.name = req.body.name;
                             req.user.name = user.name;
                             user.save(function(err, saved) {
-                                console.log("USER IS UPDATED!->", saved);
-                                var Friend = mongoose.model('Friend');
-                                Friend.findOne({userId: user._id}, function(err, correspondFriend) {
-                                    //При обновлении имени корневого пользователя нужно обновить 
-                                    //модель профиля один к одному
-                                    if (!err && correspondFriend) {
-                                        correspondFriend.name = saved.name;
-                                        correspondFriend.save();
-                                    }
-                                })
-                                return res.redirect('/');
+                                //ищем во всех сущностях, где встречается данный пользователь и изменяем его данные (пока только имя)
+                                if (!err) {
+                                    var Profile = mongoose.model('Profile');
+
+                                    Profile.findOne({userId: user._id}, function(err, meProfile) {
+                                        //При обновлении имени корневого пользователя нужно обновить 
+                                        //модель профиля один к одному
+                                        if (!err && meProfile) {
+                                            meProfile.name = saved.name;
+                                            meProfile.save();
+                                        }
+                                    })
+                                    
+                                    Profile.find({'friends.userId': user._id}, function(err, profileFriends) {
+                                        if (!err && profileFriends) {
+                                            profileFriends.forEach(function(f, idx) {
+                                                var subMe = _.where(f.friends, {userId: user._id})[0];
+                                                if (subMe) {
+                                                    subMe.name = user.name;
+
+                                                    profileFriends[idx].save();
+                                                }
+    
+                                            })
+                                        }
+                                    })
+                                    return res.redirect('/');
+                                }
                             })
                         } else {
                             return res.redirect('/');

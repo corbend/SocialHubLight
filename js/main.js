@@ -19,8 +19,9 @@ require.config({
 })
 
 require(['backbone', 'App'], function(Backbone, mainApp) {
-	console.log("START!!!");
+
 	window.Friends = mainApp;
+	//загружаем данные профиля и инициализируем глобальную точку доступа
 	mainApp.getGlobalUser(function() {
 		mainApp.start();
 	})
